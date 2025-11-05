@@ -1,0 +1,66 @@
+# Import necessary libraries
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# Load dataset
+data = pd.read_csv("/content/archive (9).zip", encoding='latin-1')
+
+# Display first few rows
+print("📄 Sample Data:")
+print(data.head())
+
+# Clean the dataset
+data = data.rename(columns={"v1": "label", "v2": "message"})
+data = data[['label', 'message']]  # Keep only relevant columns
+
+# Convert labels (ham/spam) into binary (0 = ham, 1 = spam)
+data['label'] = data['label'].map({'ham': 0, 'spam': 1})
+
+# Check for missing values
+print("\n❓ Missing Values:")
+print(data.isnull().sum())
+
+# Display dataset shape
+print(f"\nTotal messages: {len(data)}")
+print(data['label'].value_counts())
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(
+    data['message'], data['label'], test_size=0.2, random_state=42)
+
+# Convert text data into numerical features using TF-IDF
+vectorizer = TfidfVectorizer(stop_words='english', max_features=3000)
+X_train_tfidf = vectorizer.fit_transform(X_train)
+X_test_tfidf = vectorizer.transform(X_test)
+
+# Train the Naive Bayes classifier
+model = MultinomialNB()
+model.fit(X_train_tfidf, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test_tfidf)
+
+# Evaluate model
+accuracy = accuracy_score(y_test, y_pred)
+print(f"\n✅ Model Accuracy: {accuracy * 100:.2f}%")
+
+print("\n📊 Classification Report:")
+print(classification_report(y_test, y_pred))
+
+print("\n🔍 Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+# Test with a custom sample
+sample_email = [
+    "Congratulations! You've won a free iPhone. Click the link to claim now.",
+    "Hi John, please send me the project files by tomorrow."
+]
+
+sample_tfidf = vectorizer.transform(sample_email)
+predictions = model.predict(sample_tfidf)
+
+for text, pred in zip(sample_email, predictions):
+    print(f"\n📩 Email: {text}\nPrediction: {'🚫 SPAM' if pred == 1 else '✅ NOT SPAM'}")
